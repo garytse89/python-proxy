@@ -6,6 +6,8 @@ from response_factory import ResponseFactory
 import logging
 logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
+response_handler = ResponseFactory()
+
 class OutgoingRequestSocket(Thread):
 
     '''

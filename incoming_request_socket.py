@@ -1,5 +1,9 @@
 from threading import Thread
 from uuid import uuid4
+import parse
+from http_request_factory import HTTPRequestFactory
+
+request_handler = HTTPRequestFactory()
 
 class IncomingRequestSocket(Thread):
 
@@ -24,17 +28,22 @@ class IncomingRequestSocket(Thread):
         print 'run'
         while self.stop_flag:
             self.read()
-            self.parse()
+            try:
+                parsed_request = parse.parse_request_header(self.buffer)
+                if parsed_request:
+                    request_handler.process(parsed_request)
+            except:
+                pass
                 
 
     def parse(self):
-        if '\r\n\r\n' in self.buffer:
-            self.request_string = self.buffer
-            print self.buffer
-            self.request = self.buffer.split('\r\n')
-            host = (self.request[1])[6:]
-            request_type = self.request[0] # 'GET'
-            self.proxy.HTTPRequestFactory.process(request_type, host, self)
+        # if '\r\n\r\n' in self.buffer:
+        #     self.request_string = self.buffer
+        #     print self.buffer
+        #     self.request = self.buffer.split('\r\n')
+        #     host = (self.request[1])[6:]
+        #     request_type = self.request[0] # 'GET'
+        #     self.proxy.HTTPRequestFactory.process(request_type, host, self)
 
 
     def read(self):

@@ -1,8 +1,6 @@
 import socket
 import sys
-from http_request_factory import HTTPRequestFactory
 from incoming_request_socket import IncomingRequestSocket
-from response_factory import ResponseFactory
 
 class Proxy(object):
 
@@ -12,8 +10,6 @@ class Proxy(object):
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.HTTPRequestFactory = HTTPRequestFactory(self)
-        self.ResponseFactory = ResponseFactory(self)
 
         self._incoming_requests_list = []
         self._outgoing_requests_list = []

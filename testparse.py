@@ -9,6 +9,7 @@ class TestParse(unittest.TestCase):
         print data
 
         http_request = parse.parse_request_header(data)
+        print http_request
         print http_request.render()
 
     def test_parse_response(self):

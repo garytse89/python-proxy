@@ -1,9 +1,16 @@
 from outgoing_request_socket import OutgoingRequestSocket
 
-class HTTPRequestFactory(object):
+class Borg:
+    _shared_state = {}
+    def __init__(self):
+        self.__dict__ = self._shared_state
+
+
+class HTTPRequestFactory(Borg):
 
 
     def __init__(self, proxy):
+        Borg.__init__(self)
         self._actions = []
         self._actions.append(Get(proxy))
 
