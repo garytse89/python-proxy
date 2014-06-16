@@ -9,16 +9,16 @@ class Borg:
 class HTTPRequestFactory(Borg):
 
 
-    def __init__(self, proxy):
+    def __init__(self):
         Borg.__init__(self)
         self._actions = []
-        self._actions.append(Get(proxy))
+        self._actions.append(Get())
 
-    def process(self, request_type, host, incoming_request):
-
+    def process(self, req):
+        # req is a HTTPRequest object from parse.py
         for a in self._actions:
-           if a.name.upper() in request_type: # if msg has a GET field, pass the message onto get request
-                a.execute(incoming_request, host)
+            if req._method == a.name.upper():
+                a.execute(req)
 
 class IRequestAction(object):
 
@@ -34,15 +34,18 @@ class IRequestAction(object):
 class Get(IRequestAction):
 
 
-    def __init__(self, proxy):
-        self.proxy = proxy
+    def __init__(self):
+        pass
 
     @property
     def name(self):
         return self.__class__.__name__
 
-    def execute(self, incoming_request, host):
-        # create a socket to request from actual website
-        ors = OutgoingRequestSocket(incoming_request, host)
-        self.proxy.insert_outgoing_request(ors)
-        ors.send_request()
+    def execute(self, req):
+        print 'hello', req
+
+    # def execute(self, incoming_request, host):
+    #     # create a socket to request from actual website
+    #     ors = OutgoingRequestSocket(incoming_request, host)
+    #     self.proxy.insert_outgoing_request(ors)
+    #     ors.send_request()

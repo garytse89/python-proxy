@@ -78,5 +78,5 @@ class OutgoingRequestSocket(Thread):
             self.parsing_header = False
 
     def read_body(self):
-        
+        pass
 

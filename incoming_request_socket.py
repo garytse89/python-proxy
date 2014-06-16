@@ -25,7 +25,6 @@ class IncomingRequestSocket(Thread):
 
 
     def run(self):
-        print 'run'
         while self.stop_flag:
             self.read()
             try:
@@ -37,6 +36,7 @@ class IncomingRequestSocket(Thread):
                 
 
     def parse(self):
+        pass
         # if '\r\n\r\n' in self.buffer:
         #     self.request_string = self.buffer
         #     print self.buffer

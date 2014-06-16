@@ -7,8 +7,7 @@ class Borg:
 class ResponseFactory(Borg):
 
 
-    def __init__(self, proxy):
-        self.proxy = proxy
+    def __init__(self):
         self.chunked_response = ChunkedResponse()
         self.normal_response = NormalResponse()
 
