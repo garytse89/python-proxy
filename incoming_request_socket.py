@@ -23,13 +23,14 @@ class IncomingRequestSocket(Thread):
     def run(self):
         print 'run'
         while self.stop_flag:
-            self.read()            
+            self.read()
             self.parse()
                 
 
     def parse(self):
         if '\r\n\r\n' in self.buffer:
             self.request_string = self.buffer
+            print self.buffer
             self.request = self.buffer.split('\r\n')
             host = (self.request[1])[6:]
             request_type = self.request[0] # 'GET'
@@ -39,7 +40,7 @@ class IncomingRequestSocket(Thread):
     def read(self):
         try:
             data = self.socket.recv(self.BUFFER_SIZE)
-            self.buffer = self.buffer + data
+            self.buffer += data
         except:
             self.proxy.drop_incoming_request(self.id)
             data = ''

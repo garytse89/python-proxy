@@ -36,24 +36,9 @@ class OutgoingRequestSocket(Thread):
                       
     def parse(self):
         if self.parsing_header:
-            if '\r\n\r\n' in self.buffer: # unreliable
-
-                logging.debug('THE OUTGOING REQUEST\n\n' + self.buffer)
-
-                response = self.buffer.split('\n')
-                header_dict = {}
-                for field in response:
-                    field = field.split(': ')
-                    if len(field) > 1:
-                        header_dict[field[0]] = field[1]
-
-                # HTTP/1.1 200 OK field does not have a colon to use for parsing, add in manually
-                header_dict['Status'] = response[0]        
-                self.proxy.ResponseFactory.process(self, header_dict)
-                self.parsing_header = False
+            self.read_header()
         else:
-            # run something from response_factory
-
+            self.read_body()
 
     def read(self):
         try:
@@ -72,4 +57,24 @@ class OutgoingRequestSocket(Thread):
             self.start()
         except Exception, e:
             print e
+
+    def read_header(self):
+        if '\r\n\r\n' in self.buffer: # unreliable
+
+            logging.debug('THE OUTGOING REQUEST\n\n' + self.buffer)
+
+            response = self.buffer.split('\n')
+            header_dict = {}
+            for field in response:
+                field = field.split(': ')
+                if len(field) > 1:
+                    header_dict[field[0]] = field[1]
+
+            # HTTP/1.1 200 OK field does not have a colon to use for parsing, add in manually
+            header_dict['Status'] = response[0]        
+            self.proxy.ResponseFactory.process(self, header_dict)
+            self.parsing_header = False
+
+    def read_body(self):
+        
 
