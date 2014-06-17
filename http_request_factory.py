@@ -14,11 +14,14 @@ class HTTPRequestFactory(Borg):
         self._actions = []
         self._actions.append(Get())
 
-    def process(self, req):
+    def process(self, req, proxy):
+        # fp = open('buffer2.dat', 'w')
+        # fp.write(req.render())
+        # fp.close()
         # req is a HTTPRequest object from parse.py
         for a in self._actions:
             if req._method == a.name.upper():
-                a.execute(req)
+                a.execute(req, proxy)
 
 class IRequestAction(object):
 
@@ -41,11 +44,25 @@ class Get(IRequestAction):
     def name(self):
         return self.__class__.__name__
 
-    def execute(self, req):
-        print 'hello', req
+    def execute(self, req, proxy):
+        try:
+            ors = OutgoingRequestSocket(req, proxy)
+        except Exception, e:
+            print 'Invalid GET Request', e
 
-    # def execute(self, incoming_request, host):
-    #     # create a socket to request from actual website
-    #     ors = OutgoingRequestSocket(incoming_request, host)
-    #     self.proxy.insert_outgoing_request(ors)
-    #     ors.send_request()
+
+class Post(IRequestAction):
+
+
+    def __init__(self):
+        pass
+
+    @property
+    def name(self):
+        return self.__class__.__name__
+
+    def execute(self, req, proxy):
+        try:
+            ors = OutgoingRequestSocket(req, proxy)
+        except Exception, e:
+            print 'Invalid GET Request', e

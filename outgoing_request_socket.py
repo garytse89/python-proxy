@@ -17,24 +17,36 @@ class OutgoingRequestSocket(Thread):
     BUFFER_SIZE = 1024
 
 
-    def __init__(self, incoming_request, host):
-        self.proxy = incoming_request.proxy
+    def __init__(self, incoming_request, proxy):
+        self.proxy = proxy
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.id = str(uuid4())
         self.stop_flag = True
         self.buffer = ''
-
-        self.host = host
-        self.request = incoming_request.request_string
-
         self.parsing_header = True
+
+        self.proxy.insert_outgoing_request(self)
 
         super(OutgoingRequestSocket,self).__init__()
 
+        host = incoming_request.host
+        request_string = incoming_request.render()
+        self.send_request(host, request_string)
+
     def run(self):
         while self.stop_flag:
-            self.read()            
-            self.parse()
+            self.read()   
+            print(self.buffer)
+            try:
+                parsed_response = parse.parse_response_header(self.buffer)
+                if parsed_response:
+                    # determine whether chunked
+                    if parsed_response.is_chunked:
+                        pass
+                    else:
+                        pass
+            except:
+                pass
                       
     def parse(self):
         if self.parsing_header:
@@ -52,10 +64,10 @@ class OutgoingRequestSocket(Thread):
         return data
 
 
-    def send_request(self):
+    def send_request(self, host, request):
         try:
-            self.socket.connect((self.host, 80))
-            self.socket.send(self.request)
+            self.socket.connect((host, 80))
+            self.socket.send(request)
             self.start()
         except Exception, e:
             print e

@@ -7,16 +7,28 @@ class HTTPObject(object):
         self._parameters[k.title()] = v
 
     def get_content_length(self):
+        return int(self.get_argument('Content-Length'))
+
+    def get_argument(self, key):
         try:
-            return self._parameters['Content-Length']
+            return self._parameters[key]
         except KeyError:
             return None
+
+    def has_body(self):
+        if self._parameters['Content-Length']:
+            return True
+        return False
 
     def _render(self, a, b, c):
         output = '{} {} {}\r\n'.format(a, b, c)
         for k,v in self._parameters.iteritems():
             output += '{}: {}\r\n'.format(k,v)
         output += '\r\n'
+
+        if self.has_body:
+            output += self._body
+
         return output
 
 
@@ -28,6 +40,13 @@ class HTTPRequest(HTTPObject):
         self._path = None
         self._version = None
         self._parameters = {}
+
+        self._body = None
+
+
+    @property
+    def host(self):
+        return self.get_argument('Host')
 
     def render(self):
         return self._render(self._method, self._path, self._version)
@@ -68,7 +87,7 @@ def read_parameters(reader, http_object):
 
 def parse_request_header(s):
     if '\r\n\r\n' not in s:
-        raise Exception('Header not complete')
+        raise Exception('Header not complete')    
 
     reader = StringIO(s)
     http_info = reader.readline()
@@ -85,9 +104,23 @@ def parse_request_header(s):
 
     read_parameters(reader, http_request)
 
+    # what is the position of \r\n\r\n in the buffer?
+    end_position = s.index('\r\n\r\n') + 4
+
+    if end_position < len(s):
+        # there is a body present, make sure we have receive that
+        try:
+            content_length = http_request.get_content_length()
+            header_length = end_position + int(content_length)
+            if len(s) < content_length:
+                return None
+        except Exception, e:
+            print e
+            return None
+
+        http_request._body = s[end_position:]
+
     return http_request
-
-
 
 
 

@@ -24,26 +24,18 @@ class IncomingRequestSocket(Thread):
         super(IncomingRequestSocket,self).__init__()
 
 
+    # what if POST
+    # parse request header wont work under all conditions
     def run(self):
         while self.stop_flag:
             self.read()
             try:
                 parsed_request = parse.parse_request_header(self.buffer)
-                if parsed_request:
-                    request_handler.process(parsed_request)
+                if parsed_request:                    
+                    request_handler.process(parsed_request, self.proxy)
+                    self.stop_flag = False # end thread
             except:
                 pass
-                
-
-    def parse(self):
-        pass
-        # if '\r\n\r\n' in self.buffer:
-        #     self.request_string = self.buffer
-        #     print self.buffer
-        #     self.request = self.buffer.split('\r\n')
-        #     host = (self.request[1])[6:]
-        #     request_type = self.request[0] # 'GET'
-        #     self.proxy.HTTPRequestFactory.process(request_type, host, self)
 
 
     def read(self):
@@ -51,6 +43,7 @@ class IncomingRequestSocket(Thread):
             data = self.socket.recv(self.BUFFER_SIZE)
             self.buffer += data
         except:
+            self.stop_flag = False
             self.proxy.drop_incoming_request(self.id)
             data = ''
         return data

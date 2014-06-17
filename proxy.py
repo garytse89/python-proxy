@@ -12,8 +12,8 @@ class Proxy(object):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        self._incoming_requests_list = []
-        self._outgoing_requests_list = []
+        self._incoming_requests_list = {}
+        self._outgoing_requests_list = {}
         self.stop_flag = True        
 
     def start(self):
@@ -25,8 +25,13 @@ class Proxy(object):
         try:
             while self.stop_flag:
                 sock, addr = self.socket.accept()
+                # buff = sock.recv(4096)
+                # fp = open('buffer.dat', 'w')
+                # fp.write(buff)
+                # fp.close()
+                # sys.exit(0)
                 incoming_request = IncomingRequestSocket(self,sock)
-                self._incoming_requests_list.append(incoming_request)
+                self.insert_incoming_request(incoming_request.id, sock)
                 incoming_request.start()
         except KeyboardInterrupt:
             self.stop_flag = False
@@ -41,15 +46,14 @@ class Proxy(object):
 
     def shutdown(self):
         # close down all requests
-        for request in self._incoming_requests_list:
-            request.stop_flag = False
+        for key, sock in self._incoming_requests_list.iteritems():
             try:
-                request.socket.shutdown(socket.SHUT_RDWR)
-                request.socket.close()
+                sock.shutdown(socket.SHUT_RDWR)
+                sock.close()
             except Exception, e:
                 print e
 
-        for request in self._outgoing_requests_list:
+        for key, request in self._outgoing_requests_list.iteritems():
             request.stop_flag = False
             try:
                 request.socket.shutdown(socket.SHUT_RDWR)
@@ -58,31 +62,34 @@ class Proxy(object):
                 print e
 
     def drop_incoming_request(self, r_id):
-        for request in self._incoming_requests_list:
-            if r_id == request.id:
-                request.stop_flag = False
-                try:
-                    request.socket.shutdown(socket.SHUT_RDWR)
-                    request.socket.close()
-                except Exception, e:
-                    print e
-                finally:
-                    self._incoming_requests_list.remove(request)
+        request_sock = self._incoming_requests_list[r_id]
+        if request_sock:            
+            try:
+                request_sock.shutdown(socket.SHUT_RDWR)
+                request_sock.close()
+            except Exception, e:
+                print e
+            finally:
+                del self._incoming_requests_list[r_id]
 
     def drop_outgoing_request(self, r_id):
-        for request in self._outgoing_requests_list:
-            if r_id == request.id:
-                request.stop_flag = False
-                try:
-                    request.socket.shutdown(socket.SHUT_RDWR)
-                    request.socket.close()
-                except Exception, e:
-                    print e
-                finally:
-                    self._outgoing_requests_list.remove(request)
+        request = self._outgoing_requests_list[r_id]
+        if request:
+            request.stop_flag = False
+            try:
+                request.socket.shutdown(socket.SHUT_RDWR)
+                request.socket.close()
+            except Exception, e:
+                print e
+            finally:
+                self._outgoing_requests_list.remove(request)
 
-    def insert_outgoing_request(self, oreq):
-        self._outgoing_requests_list.append(oreq)
+    def insert_incoming_request(self, sock_id, sock):
+        self._incoming_requests_list[sock_id] = sock # not the thread
+
+
+    def insert_outgoing_request(self, oreq_thread):
+        self._outgoing_requests_list[oreq_thread.id] = oreq_thread # the actual thread
 
 
 if __name__ == "__main__":

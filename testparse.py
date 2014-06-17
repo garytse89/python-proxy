@@ -3,13 +3,21 @@ import parse
 
 class TestParse(unittest.TestCase):
 
-    def test_parse_request(self):
+    def test_parse_request_get(self):
         fp = open('request.txt', 'r')
         data = fp.read()
         print data
 
         http_request = parse.parse_request_header(data)
         print http_request
+        print http_request.render()
+
+    def test_parse_request_post(self):
+        fp = open('post_request.txt', 'r')
+        data = fp.read()
+        print data
+
+        http_request = parse.parse_request_header(data)
         print http_request.render()
 
     def test_parse_response(self):
