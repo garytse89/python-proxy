@@ -2,7 +2,6 @@ import socket
 import sys
 from incoming_request_socket import IncomingRequestSocket
 
-
 class Proxy(object):
 
     HOST = '10.10.100.114'                 
@@ -87,15 +86,15 @@ class Proxy(object):
     def insert_incoming_request(self, sock_id, sock):
         self._incoming_requests_list[sock_id] = sock # not the thread
 
-
     def insert_outgoing_request(self, oreq_thread):
         self._outgoing_requests_list[oreq_thread.id] = oreq_thread # the actual thread
 
     def write(self, socket_id, response):
         try:
-            self._incoming_requests_list[socket_id].write(response)
+            self._incoming_requests_list[socket_id].send(response)
+            self.drop_incoming_request(socket_id)
         except Exception,e:
-            print('exception on proxy write')
+            print('exception on proxy write', e)
 
 if __name__ == "__main__":
     proxy = Proxy()

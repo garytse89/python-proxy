@@ -5,6 +5,10 @@ from uuid import uuid4
 from response_factory import ResponseFactory
 import sys
 import logging
+import gzip
+import zlib
+from StringIO import StringIO
+
 logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
 response_handler = ResponseFactory()
@@ -18,11 +22,11 @@ class OutgoingRequestSocket(Thread):
     BUFFER_SIZE = 1024
 
 
-    def __init__(self, incoming_request, proxy):
+    def __init__(self, incoming_socket_id, incoming_request, proxy):
         self.proxy = proxy
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.id = str(uuid4())
-        self.incoming_socket_id = incoming_request.id
+        self.incoming_socket_id = incoming_socket_id
         self.stop_flag = True
         self.buffer = ''
 
@@ -78,7 +82,7 @@ class OutgoingRequestSocket(Thread):
                     try:
                         self._chunked_body, remaining_buffer = parse.parse_response_body_chunked(self._chunked_size, self.buffer)
                         if self._chunked_body:
-                            print('we shud be writing content of size = ', self._chunked_size)
+                            print(' writing content of size = ', self._chunked_size)
                             self.write(self._chunked_body)
                             self.buffer = remaining_buffer
                             # set chunked size back to 0 to anticipate next chunk
@@ -103,13 +107,30 @@ class OutgoingRequestSocket(Thread):
             data = ''
 
         if data == '':
-            print('drop orq')
             self.proxy.drop_outgoing_request(self.id)
 
         return data
 
     def write(self, content):
+        # if content is gzipped, decode it
+        #response_header = "{}\r\nContent-Length:{}\r\n\r\n{}".format(status, len(res), res)
+        
+        try:
+            reader = StringIO(self._header.render())
+            response = reader.readline() 
+        except Exception,e:
+            print e       
+
+        #print(response) #HTTP/1.1 200 OK\r\n
+ 
+        if self._header.get_argument('Content-Encoding') == 'gzip':
+            decomp = zlib.decompressobj(16+zlib.MAX_WBITS)
+            content = decomp.decompress(content)
+
+        content = "{}Content-Length:{}\r\n\r\n{}".format(response, len(content), content)
+        
         self.proxy.write(self.incoming_socket_id, content)
+        self.proxy.drop_outgoing_request(self.id)
 
     def send_request(self, host, request):
         try:

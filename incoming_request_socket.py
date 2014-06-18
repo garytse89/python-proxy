@@ -2,6 +2,8 @@ from threading import Thread
 from uuid import uuid4
 import parse
 from http_request_factory import HTTPRequestFactory
+import logging
+logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
 request_handler = HTTPRequestFactory()
 
@@ -32,7 +34,8 @@ class IncomingRequestSocket(Thread):
             try:
                 parsed_request = parse.parse_request_header(self.buffer)
                 if parsed_request:                    
-                    request_handler.process(parsed_request, self.proxy)
+                    request_handler.process(self.id, parsed_request, self.proxy)
+                    logging.debug('\n'+parsed_request.render())
                     self.stop_flag = False # end thread
             except:
                 pass

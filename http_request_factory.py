@@ -14,14 +14,10 @@ class HTTPRequestFactory(Borg):
         self._actions = []
         self._actions.append(Get())
 
-    def process(self, req, proxy):
-        # fp = open('buffer2.dat', 'w')
-        # fp.write(req.render())
-        # fp.close()
-        # req is a HTTPRequest object from parse.py
+    def process(self, req_socket_id, req, proxy):
         for a in self._actions:
             if req._method == a.name.upper():
-                a.execute(req, proxy)
+                a.execute(req_socket_id, req, proxy)
 
 class IRequestAction(object):
 
@@ -44,13 +40,11 @@ class Get(IRequestAction):
     def name(self):
         return self.__class__.__name__
 
-    def execute(self, req, proxy):
-        ors = OutgoingRequestSocket(req, proxy)
-        # try:
-        #     ors = OutgoingRequestSocket(req, proxy)
-        # except Exception, e:
-        #     print 'Invalid GET Request', e
-
+    def execute(self, req_socket_id, req, proxy):
+        try:
+            ors = OutgoingRequestSocket(req_socket_id, req, proxy)
+        except Exception, e:
+            print 'Invalid GET Request', e
 
 class Post(IRequestAction):
 
@@ -62,8 +56,8 @@ class Post(IRequestAction):
     def name(self):
         return self.__class__.__name__
 
-    def execute(self, req, proxy):
+    def execute(self, req_socket_id, req, proxy):
         try:
-            ors = OutgoingRequestSocket(req, proxy)
+            ors = OutgoingRequestSocket(req_socket_id, req, proxy)
         except Exception, e:
-            print 'Invalid GET Request', e
+            print 'Invalid POST Request', e
