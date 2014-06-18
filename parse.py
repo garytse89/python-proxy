@@ -1,3 +1,4 @@
+import sys
 from StringIO import StringIO
 
 class HTTPObject(object):
@@ -16,17 +17,21 @@ class HTTPObject(object):
             return None
 
     def has_body(self):
-        if self._parameters['Content-Length']:
-            return True
-        return False
+        try:
+            if self._parameters['Content-Length']:
+                return True
+            return False
+        except KeyError:
+            return False
 
     def _render(self, a, b, c):
+
         output = '{} {} {}\r\n'.format(a, b, c)
         for k,v in self._parameters.iteritems():
             output += '{}: {}\r\n'.format(k,v)
         output += '\r\n'
 
-        if self.has_body:
+        if self.has_body():
             output += self._body
 
         return output
@@ -61,7 +66,12 @@ class HTTPResponse(HTTPObject):
         self._status_message = None
         self._parameters = {}
 
+        self.content_pointer = 0
+        self.reading_header = True
+        self.expecting_size = True
+        self.chunked_size = 0
 
+    @property
     def is_chunked(self):
         if self._parameters['Transfer-Encoding'] == 'chunked':
             return True
@@ -69,6 +79,13 @@ class HTTPResponse(HTTPObject):
 
     def render(self):
         return self._render(self._version, self._status_number, self._status_message)
+
+
+
+class HTTPResponseBody(object):
+
+    def __init__(self):
+        self._content = []
 
 
 def read_parameters(reader, http_object):
@@ -87,7 +104,8 @@ def read_parameters(reader, http_object):
 
 def parse_request_header(s):
     if '\r\n\r\n' not in s:
-        raise Exception('Header not complete')    
+        return None
+        #raise Exception('Header not complete')    
 
     reader = StringIO(s)
     http_info = reader.readline()
@@ -124,6 +142,42 @@ def parse_request_header(s):
 
 
 
+def parse_response_body_content(s):
+    pass
+
+
+
+def parse_response_body_chunked(size, s):
+
+    if len(s) >= size:
+        # desired chunk length received through buffer
+        # find first rn
+        if '\r\n' not in s:
+            raise Exception('Chunk corrupted does not contain rnrn')
+
+        return s[:size], s[size+2:] # size of chunk does not include \r\n, add 2
+    
+    return None, None
+
+
+def parse_response_body_chunked_size(s):
+
+    reader = StringIO(s)
+    chunked_size_line = reader.readline()
+    chunked_size = chunked_size_line.rstrip('\r\n')
+    
+    try:
+        chunked_size = int(chunked_size,16)
+
+        end_position = s.index('\r\n') + 2
+
+        return chunked_size, s[end_position:]
+    except Exception, e:
+        print e
+        return 0, ''
+
+
+
 def parse_response_header(s):
 
     if '\r\n\r\n' not in s:
@@ -144,7 +198,13 @@ def parse_response_header(s):
 
     read_parameters(reader, http_response)
 
-    return http_response
+    end_position = s.index('\r\n\r\n') + 4
+
+    return http_response, s[end_position:]
+
+    
+
+    
 
 
 

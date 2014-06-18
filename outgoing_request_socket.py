@@ -1,8 +1,9 @@
 import socket
+import parse
 from threading import Thread
 from uuid import uuid4
 from response_factory import ResponseFactory
-
+import sys
 import logging
 logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
@@ -21,9 +22,14 @@ class OutgoingRequestSocket(Thread):
         self.proxy = proxy
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.id = str(uuid4())
+        self.incoming_socket_id = incoming_request.id
         self.stop_flag = True
         self.buffer = ''
+
         self.parsing_header = True
+        self._header = None
+        self._chunked_body = ''
+        self._chunked_size = 0
 
         self.proxy.insert_outgoing_request(self)
 
@@ -35,18 +41,52 @@ class OutgoingRequestSocket(Thread):
 
     def run(self):
         while self.stop_flag:
-            self.read()   
-            print(self.buffer)
+            self.read_header()
+            self.read_body()
+
+    def read_header(self):      
+        if self.parsing_header:
+            self.read()
             try:
-                parsed_response = parse.parse_response_header(self.buffer)
+                parsed_response, remaining_buffer = parse.parse_response_header(self.buffer)
                 if parsed_response:
-                    # determine whether chunked
-                    if parsed_response.is_chunked:
-                        pass
-                    else:
-                        pass
-            except:
+                    self._header = parsed_response
+                    self.buffer = remaining_buffer
+                    self.parsing_header = False
+                else:
+                    print('buffer is ... ', self.buffer)
+            except:                
                 pass
+
+    def read_body(self):
+        if not self.parsing_header:
+            self.read()
+            if self._header.is_chunked:
+                if self._chunked_size == 0:
+                    try:
+                        self._chunked_size, remaining_buffer = parse.parse_response_body_chunked_size(self.buffer)
+                        if self._chunked_size > 0:
+                            self.buffer = remaining_buffer
+                        elif self._chunked_size == 0: # last chunk
+                            print('getting last chunk = ', self.buffer)
+                            self.buffer = remaining_buffer[5:] # 0\r\n\r\n
+                            self.parsing_header = True
+                    except:
+                        pass
+                elif self._chunked_size > 0:
+                    # get body, but only write it out if valid
+                    try:
+                        self._chunked_body, remaining_buffer = parse.parse_response_body_chunked(self._chunked_size, self.buffer)
+                        if self._chunked_body:
+                            print('we shud be writing content of size = ', self._chunked_size)
+                            self.write(self._chunked_body)
+                            self.buffer = remaining_buffer
+                            # set chunked size back to 0 to anticipate next chunk
+                            self._chunked_size = 0     
+                    except:
+                        pass               
+            else:
+                parse.parse_response_body_content(self.buffer)
                       
     def parse(self):
         if self.parsing_header:
@@ -58,11 +98,18 @@ class OutgoingRequestSocket(Thread):
         try:
             data = self.socket.recv(self.BUFFER_SIZE)
             self.buffer = self.buffer + data
-        except:
-            self.proxy.drop_outgoing_request(self.id)
+        except Exception, e:
+            print e
             data = ''
+
+        if data == '':
+            print('drop orq')
+            self.proxy.drop_outgoing_request(self.id)
+
         return data
 
+    def write(self, content):
+        self.proxy.write(self.incoming_socket_id, content)
 
     def send_request(self, host, request):
         try:
@@ -71,24 +118,4 @@ class OutgoingRequestSocket(Thread):
             self.start()
         except Exception, e:
             print e
-
-    def read_header(self):
-        if '\r\n\r\n' in self.buffer: # unreliable
-
-            logging.debug('THE OUTGOING REQUEST\n\n' + self.buffer)
-
-            response = self.buffer.split('\n')
-            header_dict = {}
-            for field in response:
-                field = field.split(': ')
-                if len(field) > 1:
-                    header_dict[field[0]] = field[1]
-
-            # HTTP/1.1 200 OK field does not have a colon to use for parsing, add in manually
-            header_dict['Status'] = response[0]        
-            self.proxy.ResponseFactory.process(self, header_dict)
-            self.parsing_header = False
-
-    def read_body(self):
-        pass
 

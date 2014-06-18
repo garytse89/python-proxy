@@ -45,10 +45,11 @@ class Get(IRequestAction):
         return self.__class__.__name__
 
     def execute(self, req, proxy):
-        try:
-            ors = OutgoingRequestSocket(req, proxy)
-        except Exception, e:
-            print 'Invalid GET Request', e
+        ors = OutgoingRequestSocket(req, proxy)
+        # try:
+        #     ors = OutgoingRequestSocket(req, proxy)
+        # except Exception, e:
+        #     print 'Invalid GET Request', e
 
 
 class Post(IRequestAction):
