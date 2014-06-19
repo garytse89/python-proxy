@@ -117,7 +117,7 @@ class Proxy(object):
             print(exc_type, fname, exc_tb.tb_lineno)
             print('error on proxy.py write where response = {}', e)
             # close the connection
-            self.drop_incoming_request(socket_id)
+            # self.drop_incoming_request(socket_id)
             # print('error on proxy.py write where response = {}, \ncontent = {}'.format(response, content))
 
 if __name__ == "__main__":

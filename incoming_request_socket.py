@@ -41,7 +41,7 @@ class IncomingRequestSocket(Thread):
                 if parsed_request:                    
                     request_handler.process(self.id, parsed_request, self.proxy)
                     #print(self.id + '\n' + parsed_request.render())
-                    self.stop_flag = False # end thread
+                    #self.stop_flag = False # end thread
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -53,9 +53,12 @@ class IncomingRequestSocket(Thread):
             data = self.socket.recv(self.BUFFER_SIZE)
             self.buffer += data
 
-            print(self.buffer)
+            print('{}\n{}'.format(self.id,self.buffer))
         except:
             data = ''
+
+        if '' in data:
+            pass #print('\'\' detected in socket id = {}'.format(self.id))
 
         if data == '':
             self.stop_flag = False
