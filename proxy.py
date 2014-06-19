@@ -29,7 +29,9 @@ class Proxy(object):
                 # fp.write(buff)
                 # fp.close()
                 # sys.exit(0)
+                print('new request!!!! {} {}'.format(sock,addr))
                 incoming_request = IncomingRequestSocket(self,sock)
+                print('made a socket for it with id ={}'.format(incoming_request.id))
                 self.insert_incoming_request(incoming_request.id, sock)
                 incoming_request.start()
         except KeyboardInterrupt:

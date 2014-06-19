@@ -58,7 +58,7 @@ class OutgoingRequestSocket(Thread):
                 if parsed_response:
                     self._header = parsed_response
 
-                    #print(self.incoming_socket_id + '\n' + parsed_response.render())
+                    print(self.incoming_socket_id + '\n' + parsed_response.render())
                     
                     self.buffer = remaining_buffer
 

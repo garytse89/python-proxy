@@ -40,8 +40,12 @@ class IncomingRequestSocket(Thread):
                 parsed_request = parse.parse_request_header(self.buffer)
                 if parsed_request:                    
                     request_handler.process(self.id, parsed_request, self.proxy)
+
+                    # clear buffer because another request will come in, if not, only the original request will be loaded
+                    self.buffer = ''
+
                     #print(self.id + '\n' + parsed_request.render())
-                    #self.stop_flag = False # end thread
+                    #self.stop_flag = False # end thread (don't do this, this thread continues to receive new requests)
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
