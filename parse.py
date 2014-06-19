@@ -2,10 +2,10 @@ import sys, os
 import logging
 from StringIO import StringIO
 
-LOGNAME = 'parse'
-f = '%(levelname)-6s %(filename)s ln.%(lineno)-4d %(message)s'
-logging.basicConfig(format=f,stream=sys.stdout)
-logger = logging.getLogger(LOGNAME).setLevel(logging.DEBUG)
+# LOGNAME = 'parse'
+# f = '%(levelname)-6s %(filename)s ln.%(lineno)-4d %(message)s'
+# logging.basicConfig(format=f,stream=sys.stdout)
+# logger = logging.getLogger(LOGNAME).setLevel(logging.DEBUG)
 
 class HTTPObject(object):
 
@@ -156,7 +156,6 @@ def parse_request_header(s):
 
 
 def parse_response_body_content(size, s):
-
     if len(s) >= size:
         return s[:size]
 
@@ -168,6 +167,8 @@ def parse_response_body_content(size, s):
 
 def parse_response_body_chunked(size, s):
 
+    # print(len(s), size)
+        
     if len(s) >= size:
         # desired chunk length received through buffer
         # find first rn

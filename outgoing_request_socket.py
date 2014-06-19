@@ -8,7 +8,6 @@ import logging
 import gzip
 import zlib
 from StringIO import StringIO
-
 logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
 response_handler = ResponseFactory()
@@ -36,6 +35,7 @@ class OutgoingRequestSocket(Thread):
         self._content_length = 0
         self._chunked_body = ''
         self._chunked_size = 0
+        self._first_chunk = True
 
         self.proxy.insert_outgoing_request(self)
 
@@ -75,17 +75,28 @@ class OutgoingRequestSocket(Thread):
 
     def read_body(self):
         if not self.parsing_header:
-            self.read()
+            
+            # no need to do a read if the expected content length is already equal to the remaining buffer (leftover from reading the response header)
+            # if len(self.buffer) != 0 and len(self.buffer) < self._content_length:
+            if len(self.buffer) != self._content_length:
+                self.read()
+
             if self._header.is_chunked:
                 if self._chunked_size == 0:
                     try:
                         self._chunked_size, remaining_buffer = parse.parse_response_body_chunked_size(self.buffer)
                         if self._chunked_size > 0:
+                            print('{} now trying to get chunk of size {}'.format(self.id, self._chunked_size))
                             self.buffer = remaining_buffer
                         elif self._chunked_size == 0: # last chunk
                             print('getting last chunk = ', self.buffer)
-                            self.buffer = remaining_buffer[5:] # 0\r\n\r\n
-                            self.parsing_header = True
+                            # we're done
+                            temp = self.socket.recv(1024)
+                            print('are we done ??? {}'.format(len(temp)))
+                            self.proxy.drop_outgoing_request(self.id)
+
+                            # self.buffer = remaining_buffer[5:] # 0\r\n\r\n
+                            # self.parsing_header = True
                     except Exception as e:
                         exc_type, exc_obj, exc_tb = sys.exc_info()
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -95,18 +106,36 @@ class OutgoingRequestSocket(Thread):
                     try:
                         self._chunked_body, remaining_buffer = parse.parse_response_body_chunked(self._chunked_size, self.buffer)
                         if self._chunked_body:
+                            print('{} got complete chunk of size = {}, theres remaining buffer of size = {}'.format(self.id, len(self._chunked_body), len(remaining_buffer)))
                             self.write(self._chunked_body)
+                            self.debugwrite1()
                             self.buffer = remaining_buffer
                             # set chunked size back to 0 to anticipate next chunk
                             self._chunked_size = 0 
+                            self._first_chunk = False
+                        else:
+                            pass
+                            #print('{} trying to receive complete chunk, size of buffer = {}'.format(self.id, len(self.buffer)))
                     except Exception as e:
                         exc_type, exc_obj, exc_tb = sys.exc_info()
                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                        print(exc_type, fname, exc_tb.tb_lineno)              
-            else:                
+                        print("first chunk = ", self._first_chunk, e, exc_type, fname, exc_tb.tb_lineno)  
+                        self.debugwrite2()        
+            else:               
                 self._content_body += parse.parse_response_body_content(self._content_length, self.buffer)
                 if self._content_body:
                     self.write(self._content_body)
+
+    def debugwrite1(self):
+        fp = open('workingchunk.txt', 'w')
+        fp.write(self._chunked_body)
+        fp.close()
+
+    def debugwrite2(self):
+        fp = open('nonworkingchunk.txt', 'w')
+        fp.write(self._chunked_body)
+        fp.close()
+
 
     def parse(self):
         if self.parsing_header:
@@ -124,9 +153,6 @@ class OutgoingRequestSocket(Thread):
             print(exc_type, fname, exc_tb.tb_lineno)
             data = ''
 
-        if data == '':
-            self.proxy.drop_outgoing_request(self.id)
-
         return data
 
     def write(self, content):
@@ -139,14 +165,20 @@ class OutgoingRequestSocket(Thread):
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)     
+            print(exc_type, fname, exc_tb.tb_lineno)
  
-        if self._header.get_argument('Content-Encoding') == 'gzip':
-            decomp = zlib.decompressobj(16+zlib.MAX_WBITS)
-            content = decomp.decompress(content)        
+        # if not self._header.is_chunked and self._header.get_argument('Content-Encoding') == 'gzip':
+        #     decomp = zlib.decompressobj(16+zlib.MAX_WBITS)
+        #     content = decomp.decompress(content)
+        # elif self._header.is_chunked and self._header.get_argument('Content-Encoding') == 'gzip':
+        #     if self._first_chunk:
+        #         decomp = zlib.decompressobj(16+zlib.MAX_WBITS)
+        #         content = decomp.decompress(content)
+
+        content = self._header.render() + content
         
         self.proxy.write(self.incoming_socket_id, response, content)        
-        self.proxy.drop_outgoing_request(self.id)
+        # self.proxy.drop_outgoing_request(self.id)
 
     def send_request(self, host, request):
         try:

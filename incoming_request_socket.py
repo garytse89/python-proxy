@@ -7,8 +7,8 @@ import sys, os
 LOGNAME = 'incoming'
 f = '%(levelname)-6s %(filename)s ln.%(lineno)-4d %(message)s'
 #logging.basicConfig(format=f,stream=sys.stdout)
-logging.basicConfig(format=f, filename='example.log')
-logger = logging.getLogger(LOGNAME).setLevel(logging.DEBUG)
+# logging.basicConfig(format=f, filename='example.log')
+# logger = logging.getLogger(LOGNAME).setLevel(logging.DEBUG)
 
 request_handler = HTTPRequestFactory()
 
@@ -59,13 +59,14 @@ class IncomingRequestSocket(Thread):
             data = self.socket.recv(self.BUFFER_SIZE)
             self.buffer += data
 
-            print('Incoming Request Socket: \n{}\n{}'.format(self.id,self.buffer))
+            # print('Incoming Request Socket: \n{}\n{}'.format(self.id,self.buffer))
         except:
             data = ''
 
         if '' in data and self.stop_flag:
-            print('\'\' detected in socket id = {}, drop the damn connection after write out'.format(self.id))
-            self.ready_to_drop = True
+            pass
+            #print('\'\' detected in socket id = {}, drop the damn connection after write out'.format(self.id))
+            #self.ready_to_drop = True # don't drop
 
         if data == '':
             self.stop_flag = False

@@ -29,9 +29,9 @@ class Proxy(object):
                 # fp.write(buff)
                 # fp.close()
                 # sys.exit(0)
-                print('new request!!!! {} {}'.format(sock,addr))
+                #print('new request!!!! {} {}'.format(sock,addr))
                 incoming_request = IncomingRequestSocket(self,sock)
-                print('made a socket for it with id ={}'.format(incoming_request.id))
+                #print('made a socket for it with id ={}'.format(incoming_request.id))
                 self.insert_incoming_request(incoming_request)
                 incoming_request.start()
         except KeyboardInterrupt:
@@ -49,14 +49,15 @@ class Proxy(object):
 
     def shutdown(self):
         # close down all requests
-        for key, sock in self._incoming_requests_list.iteritems():
+        for key, request in self._incoming_requests_list.iteritems():
+            request.stop_flag = False
             try:
-                sock.shutdown(socket.SHUT_RDWR)
-                sock.close()
+                request.socket.shutdown(socket.SHUT_RDWR)
+                request.socket.close()
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                print(exc_type, fname, exc_tb.tb_lineno)
+                print(e, exc_type, fname, exc_tb.tb_lineno)
 
         for key, request in self._outgoing_requests_list.iteritems():
             request.stop_flag = False
@@ -101,7 +102,7 @@ class Proxy(object):
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                print(exc_type, fname, exc_tb.tb_lineno)
+                print("If socket is not connected error, the socket was already closed and we checked 0 length", e, exc_type, fname, exc_tb.tb_lineno)
             finally:
                 del self._outgoing_requests_list[r_id]
 
@@ -112,10 +113,12 @@ class Proxy(object):
         self._outgoing_requests_list[oreq_thread.id] = oreq_thread
 
     def write(self, r_id, response, content):
-        content = "{}Content-Length:{}\r\n\r\n{}".format(response, len(content), content)
+        #content = "{}Content-Length:{}\r\n\r\n{}".format(response, len(content), content)
         try:
             ireq_thread = self._incoming_requests_list[r_id]
             ireq_thread.socket.send(content)
+
+            print(content)
 
             if ireq_thread.ready_to_drop:
                 self.drop_incoming_request(r_id)
