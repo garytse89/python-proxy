@@ -1,5 +1,5 @@
 import socket
-import sys
+import sys, os
 from incoming_request_socket import IncomingRequestSocket
 
 class Proxy(object):
@@ -38,8 +38,10 @@ class Proxy(object):
         try: 
             self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
-        except Exception, e:
-            print e
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
         finally:
             self.shutdown()
 
@@ -49,37 +51,53 @@ class Proxy(object):
             try:
                 sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
-            except Exception, e:
-                print e
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
 
         for key, request in self._outgoing_requests_list.iteritems():
             request.stop_flag = False
             try:
                 request.socket.shutdown(socket.SHUT_RDWR)
                 request.socket.close()
-            except Exception, e:
-                print e
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
 
     def drop_incoming_request(self, r_id):
-        request_sock = self._incoming_requests_list[r_id]
+        try:
+            request_sock = self._incoming_requests_list[r_id]
+        except KeyError, e:
+            return 
+
         if request_sock:            
             try:
                 request_sock.shutdown(socket.SHUT_RDWR)
                 request_sock.close()
-            except Exception, e:
-                print e
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
             finally:
                 del self._incoming_requests_list[r_id]
 
     def drop_outgoing_request(self, r_id):
-        request = self._outgoing_requests_list[r_id]
+        try:
+            request = self._outgoing_requests_list[r_id]
+        except KeyError, e:
+            return 
+
         if request:
             request.stop_flag = False
             try:
                 request.socket.shutdown(socket.SHUT_RDWR)
                 request.socket.close()
-            except Exception, e:
-                print e
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
             finally:
                 del self._outgoing_requests_list[r_id]
 
@@ -89,12 +107,18 @@ class Proxy(object):
     def insert_outgoing_request(self, oreq_thread):
         self._outgoing_requests_list[oreq_thread.id] = oreq_thread # the actual thread
 
-    def write(self, socket_id, response):
+    def write(self, socket_id, response, content):
+        content = "{}Content-Length:{}\r\n\r\n{}".format(response, len(content), content)
         try:
-            self._incoming_requests_list[socket_id].send(response)
+            self._incoming_requests_list[socket_id].send(content)
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
+            print('error on proxy.py write where response = {}', e)
+            # close the connection
             self.drop_incoming_request(socket_id)
-        except Exception,e:
-            print('exception on proxy write', e)
+            # print('error on proxy.py write where response = {}, \ncontent = {}'.format(response, content))
 
 if __name__ == "__main__":
     proxy = Proxy()
@@ -102,7 +126,9 @@ if __name__ == "__main__":
         proxy.start()
     except Exception, e:
         proxy.stop_flag = False
-        print e
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        print(e, exc_type, fname, exc_tb.tb_lineno)
     finally:
         sys.exit()
 

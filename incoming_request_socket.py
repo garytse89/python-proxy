@@ -3,14 +3,19 @@ from uuid import uuid4
 import parse
 from http_request_factory import HTTPRequestFactory
 import logging
-logging.basicConfig(filename='example.log',level=logging.DEBUG)
+import sys, os
+LOGNAME = 'incoming'
+f = '%(levelname)-6s %(filename)s ln.%(lineno)-4d %(message)s'
+#logging.basicConfig(format=f,stream=sys.stdout)
+logging.basicConfig(format=f, filename='example.log')
+logger = logging.getLogger(LOGNAME).setLevel(logging.DEBUG)
 
 request_handler = HTTPRequestFactory()
 
 class IncomingRequestSocket(Thread):
 
 
-    BUFFER_SIZE = 1024
+    BUFFER_SIZE = 4096
 
 
     def __init__(self, proxy, sock):
@@ -35,19 +40,25 @@ class IncomingRequestSocket(Thread):
                 parsed_request = parse.parse_request_header(self.buffer)
                 if parsed_request:                    
                     request_handler.process(self.id, parsed_request, self.proxy)
-                    logging.debug('\n'+parsed_request.render())
+                    #print(self.id + '\n' + parsed_request.render())
                     self.stop_flag = False # end thread
-            except:
-                pass
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(exc_type, fname, exc_tb.tb_lineno)
 
 
     def read(self):
         try:
             data = self.socket.recv(self.BUFFER_SIZE)
             self.buffer += data
+
+            print(self.buffer)
         except:
-            self.stop_flag = False
-            self.proxy.drop_incoming_request(self.id)
             data = ''
-        return data
+
+        if data == '':
+            self.stop_flag = False
+        else:
+            return data
 

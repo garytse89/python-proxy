@@ -1,5 +1,11 @@
-import sys
+import sys, os
+import logging
 from StringIO import StringIO
+
+LOGNAME = 'parse'
+f = '%(levelname)-6s %(filename)s ln.%(lineno)-4d %(message)s'
+logging.basicConfig(format=f,stream=sys.stdout)
+logger = logging.getLogger(LOGNAME).setLevel(logging.DEBUG)
 
 class HTTPObject(object):
 
@@ -8,7 +14,10 @@ class HTTPObject(object):
         self._parameters[k.title()] = v
 
     def get_content_length(self):
-        return int(self.get_argument('Content-Length'))
+        try:
+            return int(self.get_argument('Content-Length'))
+        except:
+            return 0
 
     def get_argument(self, key):
         try:
@@ -46,7 +55,7 @@ class HTTPRequest(HTTPObject):
         self._version = None
         self._parameters = {}
 
-        self._body = None
+        self._body = ''
 
 
     @property
@@ -71,11 +80,15 @@ class HTTPResponse(HTTPObject):
         self.expecting_size = True
         self.chunked_size = 0
 
+        self._body = '' # will not be filled, use for POST requests only
+
     @property
     def is_chunked(self):
-        if self._parameters['Transfer-Encoding'] == 'chunked':
-            return True
-        return False
+        try:
+            if self._parameters['Transfer-Encoding'] == 'chunked':
+                return True
+        except:
+            return False
 
     def render(self):
         return self._render(self._version, self._status_number, self._status_message)
@@ -102,7 +115,7 @@ def read_parameters(reader, http_object):
 
 
 
-def parse_request_header(s):
+def parse_request_header(s):     
     if '\r\n\r\n' not in s:
         return None
         #raise Exception('Header not complete')    
@@ -117,7 +130,7 @@ def parse_request_header(s):
 
     http_request = HTTPRequest()
     http_request._method = http_info[0].upper()
-    http_request._path = http_info[1]
+    http_request._path = http_info[1].replace(' ', '') # spaces will lead to [Errno 8] nodename nor servname provided]
     http_request._version = http_info[2] 
 
     read_parameters(reader, http_request)
@@ -129,11 +142,11 @@ def parse_request_header(s):
         # there is a body present, make sure we have receive that
         try:
             content_length = http_request.get_content_length()
-            header_length = end_position + int(content_length)
-            if len(s) < content_length:
+            total_length = end_position + int(content_length)
+            if len(s) < total_length:
                 return None
         except Exception, e:
-            print e
+            print 'Exception on parse', e
             return None
 
         http_request._body = s[end_position:]
@@ -142,8 +155,14 @@ def parse_request_header(s):
 
 
 
-def parse_response_body_content(s):
-    pass
+def parse_response_body_content(size, s):
+
+    if len(s) >= size:
+        return s[:size]
+
+    return ''
+
+    
 
 
 
