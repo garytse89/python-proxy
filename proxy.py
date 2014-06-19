@@ -32,7 +32,7 @@ class Proxy(object):
                 print('new request!!!! {} {}'.format(sock,addr))
                 incoming_request = IncomingRequestSocket(self,sock)
                 print('made a socket for it with id ={}'.format(incoming_request.id))
-                self.insert_incoming_request(incoming_request.id, sock)
+                self.insert_incoming_request(incoming_request)
                 incoming_request.start()
         except KeyboardInterrupt:
             self.stop_flag = False
@@ -70,14 +70,16 @@ class Proxy(object):
 
     def drop_incoming_request(self, r_id):
         try:
-            request_sock = self._incoming_requests_list[r_id]
+            request = self._incoming_requests_list[r_id]
         except KeyError, e:
             return 
 
-        if request_sock:            
+        if request:  
+            request.stop_flag = False          
             try:
-                request_sock.shutdown(socket.SHUT_RDWR)
-                request_sock.close()
+                request.socket.shutdown(socket.SHUT_RDWR)
+                request.socket.close()
+                print('Request {} dropped'.format(r_id))
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -103,16 +105,20 @@ class Proxy(object):
             finally:
                 del self._outgoing_requests_list[r_id]
 
-    def insert_incoming_request(self, sock_id, sock):
-        self._incoming_requests_list[sock_id] = sock # not the thread
+    def insert_incoming_request(self, ireq_thread):
+        self._incoming_requests_list[ireq_thread.id] = ireq_thread
 
     def insert_outgoing_request(self, oreq_thread):
-        self._outgoing_requests_list[oreq_thread.id] = oreq_thread # the actual thread
+        self._outgoing_requests_list[oreq_thread.id] = oreq_thread
 
-    def write(self, socket_id, response, content):
+    def write(self, r_id, response, content):
         content = "{}Content-Length:{}\r\n\r\n{}".format(response, len(content), content)
         try:
-            self._incoming_requests_list[socket_id].send(content)
+            ireq_thread = self._incoming_requests_list[r_id]
+            ireq_thread.socket.send(content)
+
+            if ireq_thread.ready_to_drop:
+                self.drop_incoming_request(r_id)
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
