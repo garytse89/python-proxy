@@ -103,12 +103,12 @@ class Proxy(object):
         #content = "{}Content-Length:{}\r\n\r\n{}".format(response, len(content), content)
         try:
             ireq_thread = self._incoming_requests_list[r_id]
+            ireq_thread.socket.send(content)
         except Exception as e:
             #self.drop_incoming_request(r_id)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-            print('error on proxy.py write where response = {}', e)
+            print('{} is causing error on proxy.py write where response = {}'.format(r_id,e))
             # close the connection
             # self.drop_incoming_request(socket_id)
             # print('error on proxy.py write where response = {}, \ncontent = {}'.format(response, content))

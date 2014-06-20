@@ -47,6 +47,8 @@ class OutgoingRequestSocket(Thread):
         request_string = incoming_request.render()
         self.send_request(host, request_string)
 
+        print('Incoming id {} created outgoing id {}'.format(self.incoming_socket_id, self.id))
+
     def run(self):
         while self.stop_flag:
             self.read_header()
@@ -58,24 +60,30 @@ class OutgoingRequestSocket(Thread):
             try:
                 parsed_response, self.remaining_buffer = parse.parse_response_header(self.buffer)
                 if parsed_response:
-                    self._header = parsed_response
-                    print(self.incoming_socket_id + '\n' + parsed_response.render())                    
+                    self._header = parsed_response                                       
                     self.buffer = self.remaining_buffer
+
+                    # parse content-length if not chunked
                     if not self._header.is_chunked:
-                        self._content_length = int(self._header.get_argument('Content-Length'))
+                        if self._header.get_argument('Content-Length'):
+                            self._content_length = int(self._header.get_content_length())
+                        else: #304 Not modified, should fetch from cache
+                            self.proxy.drop_outgoing_request(self.id)
+                            print('304 found, drop.')
+
                     self.parsing_header = False
+                    # print the header:
+                    print(self.id + '\n' + parsed_response.render()) 
                 else:
                     print('buffer is ... ', self.buffer)
             except Exception as e:
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                print(exc_type, fname, exc_tb.tb_lineno)
+                print e
 
     def read_body(self):
         if not self.parsing_header:            
             # no need to do a read if the expected content length is already equal to the remaining buffer (leftover from reading the response header)
-            if len(self.buffer) != self._content_length:
-                self.read()
+            if '0\r\n\r\n' not in self.buffer and len(self.buffer) != self._content_length:
+                self.read() # in case last chunk was already read and socket.recv() will now block
 
             if self._header.is_chunked:
                 if self._chunked_size == 0:
@@ -90,13 +98,13 @@ class OutgoingRequestSocket(Thread):
                     try:
                         self._chunked_body, self.remaining_buffer = parse.parse_response_body_chunked(self._chunked_size + len(self._chunked_size_line), self.buffer)
                         self.handle_chunked_body()
-                            #print('{} trying to receive complete chunk, size of buffer = {}'.format(self.id, len(self.buffer)))
                     except Exception as e:
                         print('ors read_body line 94', e)       
             else:               
                 self._content_body += parse.parse_response_body_content(self._content_length, self.buffer)
                 if self._content_body:
                     self.write(self._content_body)
+                    self.buffer = ''
 
     def debugwrite1(self):
         fp = open('workingchunk.txt', 'w')
@@ -112,9 +120,10 @@ class OutgoingRequestSocket(Thread):
         if self._chunked_size > 0:
             print('{} now trying to get chunk of size {}'.format(self.id, self._chunked_size))
         elif self._chunked_size == 0: # last chunk
-            #print('getting last chunk = ', self.buffer)
-            #temp = self.socket.recv(1024)
-            self.proxy.drop_outgoing_request(self.id)
+            if '0\r\n\r\n' == self.buffer:
+                # write it out and drop this thread/socket
+                print('drop the thread, since its broken anyway.')
+                self.proxy.drop_outgoing_request(self.id)                
 
     def handle_chunked_body(self):
         if self._chunked_body:
@@ -139,10 +148,8 @@ class OutgoingRequestSocket(Thread):
             data = self.socket.recv(self.BUFFER_SIZE)
             self.buffer = self.buffer + data
         except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
-            data = ''
+            print(self.id, 'ORS socket receive error, drop it', e)
+            self.proxy.drop_outgoing_request(self.id)
 
         return data
 
@@ -159,7 +166,7 @@ class OutgoingRequestSocket(Thread):
             print(exc_type, fname, exc_tb.tb_lineno)
 
         content = self._header.render() + content        
-        self.proxy.write(self.incoming_socket_id, response, content)  
+        self.proxy.write(self.incoming_socket_id, response, content)
 
     def send_request(self, host, request):
         try:

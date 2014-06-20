@@ -44,7 +44,7 @@ class IncomingRequestSocket(Thread):
                     # clear buffer because another request will come in, if not, only the original request will be loaded
                     self.buffer = ''
 
-                    #print(self.id + '\n' + parsed_request.render())
+                    print(self.id + '\n' + parsed_request.render())
                     #self.stop_flag = False # end thread (don't do this, this thread continues to receive new requests)
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
