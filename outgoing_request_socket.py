@@ -71,6 +71,13 @@ class OutgoingRequestSocket(Thread):
                             self.proxy.drop_outgoing_request(self.id)
                             print('304 found, drop.')
 
+                    # drop if 404
+                    if int(self._header._status_number) == 404:
+                        print('404 found, drop', self.buffer)
+                        #self.read()
+                        #print('2', self.buffer)
+                        #self.proxy.drop_outgoing_request(self.id)
+
                     self.parsing_header = False
                     # print the header:
                     print(self.id + '\n' + parsed_response.render()) 
@@ -103,8 +110,12 @@ class OutgoingRequestSocket(Thread):
             else:               
                 self._content_body += parse.parse_response_body_content(self._content_length, self.buffer)
                 if self._content_body:
+                    print('{}: ** write'.format(self.id))
                     self.write(self._content_body)
-                    self.buffer = ''
+                    print('{}: Check for empty length'.format(self.id))
+                    if self.socket.recv(4096) == '':
+                        print ("{}: close socket, we're done".format(self.id))
+                        self.proxy.drop_outgoing_request(self.id)
 
     def debugwrite1(self):
         fp = open('workingchunk.txt', 'w')
@@ -176,5 +187,5 @@ class OutgoingRequestSocket(Thread):
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
+            print(exc_type, fname, exc_tb.tb_lineno, "error on host = ", host)
 
