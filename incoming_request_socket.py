@@ -4,18 +4,15 @@ import parse
 from http_request_factory import HTTPRequestFactory
 import logging
 import sys, os
-LOGNAME = 'incoming'
-f = '%(levelname)-6s %(filename)s ln.%(lineno)-4d %(message)s'
-#logging.basicConfig(format=f,stream=sys.stdout)
-# logging.basicConfig(format=f, filename='example.log')
-# logger = logging.getLogger(LOGNAME).setLevel(logging.DEBUG)
+
+logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
 request_handler = HTTPRequestFactory()
 
 class IncomingRequestSocket(Thread):
 
 
-    BUFFER_SIZE = 4096
+    BUFFER_SIZE = 1024
 
 
     def __init__(self, proxy, sock):
@@ -36,12 +33,14 @@ class IncomingRequestSocket(Thread):
     def run(self):
         while self.stop_flag:
             self.read()
+            print(self.id, self.buffer)
             try:
                 parsed_request = parse.parse_request_header(self.buffer)
                 if parsed_request:                    
                     request_handler.process(self.id, parsed_request, self.proxy)
 
                     # clear buffer because another request will come in, if not, only the original request will be loaded
+                    
                     self.buffer = ''
 
                     print(self.id + '\n' + parsed_request.render())
@@ -56,6 +55,13 @@ class IncomingRequestSocket(Thread):
         try:
             data = self.socket.recv(self.BUFFER_SIZE)
             self.buffer += data
+
+            if data == '':
+                print('dropped this connection because \'\' sighted', self.id)
+                self.proxy.drop_incoming_request(self.id)
         except Exception as e:
             print(self.id, 'IRS socket receive error', e)
+            self.proxy.drop_incoming_request(self.id)
+
+        
 

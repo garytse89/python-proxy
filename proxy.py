@@ -95,6 +95,7 @@ class Proxy(object):
 
     def insert_incoming_request(self, ireq_thread):
         self._incoming_requests_list[ireq_thread.id] = ireq_thread
+        print('Current # of ireq = ', len(self._incoming_requests_list))
 
     def insert_outgoing_request(self, oreq_thread):
         self._outgoing_requests_list[oreq_thread.id] = oreq_thread

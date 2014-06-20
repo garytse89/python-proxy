@@ -2,11 +2,6 @@ import sys, os
 import logging
 from StringIO import StringIO
 
-# LOGNAME = 'parse'
-# f = '%(levelname)-6s %(filename)s ln.%(lineno)-4d %(message)s'
-# logging.basicConfig(format=f,stream=sys.stdout)
-# logger = logging.getLogger(LOGNAME).setLevel(logging.DEBUG)
-
 class HTTPObject(object):
 
 
@@ -178,15 +173,14 @@ def parse_response_body_chunked(size, s):
     return None, None
 
 
-def parse_response_body_chunked_size(s):    
-    
+def parse_response_body_chunked_size(s):
     try:
         chunked_size_line = s.split('\r\n')[0]
         chunked_size = int(chunked_size_line,16)
         return chunked_size, chunked_size_line + '\r\n'
     except Exception, e:
-        print e
-        return 0, 0
+        print e, 'parse.py: chunked_size - buffer does not contain valid size', s
+        return 0, ''
 
 
 
