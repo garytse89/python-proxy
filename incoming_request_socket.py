@@ -56,13 +56,6 @@ class IncomingRequestSocket(Thread):
         try:
             data = self.socket.recv(self.BUFFER_SIZE)
             self.buffer += data
-
-            # print('Incoming Request Socket: \n{}\n{}'.format(self.id,self.buffer))
-        except:
-            data = ''
-
-        if data == '':
-            self.stop_flag = False
-        else:
-            return data
+        except Exception as e:
+            print(self.id, 'IRS socket receive error', e)
 

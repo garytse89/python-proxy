@@ -1,52 +1,13 @@
-7a1
-<!DOCTYPE HTML>
-<html>
-<head>
-    
-  <title>Squarespace - No Such Account</title>
-  <meta http-equiv="X-UA-Compatible" content="chrome=1">
-
-  <script type="text/javascript" src="//static.squarespace.com/universal/scripts-compressed/common-e7e7c6083d584e2fab7ec674d6b10e4d-min.js"></script><link rel="stylesheet" type="text/css" href="//static.squarespace.com/universal/styles-compressed/common-2f953dccf7a7535b18a8c31760adc42a-min.css"/>
-  <script type="text/javascript" src="//static.squarespace.com/universal/scripts-compressed/dialog-491a7f03a43e179ae78423b4eb835416-min.js"></script><link rel="stylesheet" type="text/css" href="//static.squarespace.com/universal/styles-compressed/dialog-5f85f6d82c5c53b629af00daab49048c-min.css"/>
-  <script type="text/javascript" src="//static.squarespace.com/universal/scripts-compressed/system-page-2f0e18eb6b5c2ff7dd6a2a3dbc3b42bf-min.js"></script><link rel="stylesheet" type="text/css" href="//static.squarespace.com/universal/styles-compressed/system-page-545ceb008ecbcf07224182904036cc21-min.css"/>
-
-</head>
-<body class="squarespace-config squarespace-system-page">
-
-  <div class="minimal-logo">&nbsp;</div>
-
-  <script>
-
-    Static =  { };
-    Static.CONTEXT = {};
-
-    Y = YUI(YUI_CONFIG).use('squarespace-common', 'squarespace-system-page', function(Y) {
-
-      var message;
-
-      if (Static.CONTEXT.removed) {
-
-        message = '<div class="bigtext"><div class="title">Account Removed</div><div class="description">This account has been removed by the owner.</div></div>';
-
-      } else {
-
-        message = '<div class="bigtext"><div class="title">No Such Account</div><div class="description">The account you requested does not exist.</div></div>';
-
-      }
-      
-      LB = new Y.Squarespace.Lightbox({
-        disableNormalClose: true,
-        clickAnywhereToExit: false,
-        content: message,
-        margin: 100
-      });
-
-      LB.show();
-        
-    }); 
-
-  </script> 
-  
-</body>
-</html>
-
+224
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Open Sans'), local('OpenSans'), url(http://themes.googleusercontent.com/static/fonts/opensans/v8/cJZKeOuBrn4kERxqtaUH3aCWcynf_cDxXwCLxiixG1c.ttf) format('truetype');
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 600;
+  src: local('Open Sans Semibold'), local('OpenSans-Semibold'), url(http://themes.googleusercontent.com/static/fonts/opensans/v8/MTP_ySUJH_bn48VBG8sNSonF5uFdDttMLvmWuJdhhgs.ttf) format('truetype');
+}

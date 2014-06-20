@@ -68,7 +68,7 @@ class OutgoingRequestSocket(Thread):
                         if self._header.get_argument('Content-Length'):
                             self._content_length = int(self._header.get_content_length())
                         else: #304 Not modified, should fetch from cache
-                            self.proxy.drop_outgoing_request(self.id)
+                            #self.proxy.drop_outgoing_request(self.id)
                             print('304 found, drop.')
 
                     # drop if 404
@@ -109,13 +109,22 @@ class OutgoingRequestSocket(Thread):
                         print('ors read_body line 94', e)       
             else:               
                 self._content_body += parse.parse_response_body_content(self._content_length, self.buffer)
+                
+                ''' NOTE:
+
+                self.buffer was filled up based on a socket receieve of fixed 4096 bytes, which means
+                the content + '' (empty terminating string) has been already received
+
+                Under the assumption that more '' empty strings will continue to be read by the socket,
+                as per below, we can then safely end the socket/thread
+
+                '''
+
                 if self._content_body:
-                    print('{}: ** write'.format(self.id))
                     self.write(self._content_body)
-                    print('{}: Check for empty length'.format(self.id))
-                    if self.socket.recv(4096) == '':
-                        print ("{}: close socket, we're done".format(self.id))
-                        self.proxy.drop_outgoing_request(self.id)
+                    self.proxy.drop_outgoing_request(self.id)
+                    # if self.socket.recv(4096) == '':
+                    #     self.proxy.drop_outgoing_request(self.id)
 
     def debugwrite1(self):
         fp = open('workingchunk.txt', 'w')
