@@ -166,9 +166,7 @@ def parse_response_body_content(size, s):
 
 
 def parse_response_body_chunked(size, s):
-
-    # print(len(s), size)
-        
+    
     if len(s) >= size:
         # desired chunk length received through buffer
         # find first rn
@@ -180,21 +178,15 @@ def parse_response_body_chunked(size, s):
     return None, None
 
 
-def parse_response_body_chunked_size(s):
-
-    reader = StringIO(s)
-    chunked_size_line = reader.readline()
-    chunked_size = chunked_size_line.rstrip('\r\n')
+def parse_response_body_chunked_size(s):    
     
     try:
-        chunked_size = int(chunked_size,16)
-
-        end_position = s.index('\r\n') + 2
-
-        return chunked_size, s[end_position:]
+        chunked_size_line = s.split('\r\n')[0]
+        chunked_size = int(chunked_size_line,16)
+        return chunked_size, chunked_size_line + '\r\n'
     except Exception, e:
         print e
-        return 0, ''
+        return 0, 0
 
 
 

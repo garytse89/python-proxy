@@ -70,39 +70,26 @@ class Proxy(object):
                 print(exc_type, fname, exc_tb.tb_lineno)
 
     def drop_incoming_request(self, r_id):
-        try:
-            request = self._incoming_requests_list[r_id]
-        except KeyError, e:
-            return 
-
+        request = self._incoming_requests_list[r_id]
         if request:  
             request.stop_flag = False          
             try:
                 request.socket.shutdown(socket.SHUT_RDWR)
                 request.socket.close()
-                print('Request {} dropped'.format(r_id))
             except Exception as e:
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                print(exc_type, fname, exc_tb.tb_lineno)
+                pass
             finally:
                 del self._incoming_requests_list[r_id]
 
     def drop_outgoing_request(self, r_id):
-        try:
-            request = self._outgoing_requests_list[r_id]
-        except KeyError, e:
-            return 
-
+        request = self._outgoing_requests_list[r_id]
         if request:
             request.stop_flag = False
             try:
                 request.socket.shutdown(socket.SHUT_RDWR)
                 request.socket.close()
             except Exception as e:
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                print("If socket is not connected error, the socket was already closed and we checked 0 length", e, exc_type, fname, exc_tb.tb_lineno)
+                pass
             finally:
                 del self._outgoing_requests_list[r_id]
 
@@ -116,13 +103,8 @@ class Proxy(object):
         #content = "{}Content-Length:{}\r\n\r\n{}".format(response, len(content), content)
         try:
             ireq_thread = self._incoming_requests_list[r_id]
-            ireq_thread.socket.send(content)
-
-            print(content)
-
-            if ireq_thread.ready_to_drop:
-                self.drop_incoming_request(r_id)
         except Exception as e:
+            #self.drop_incoming_request(r_id)
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)

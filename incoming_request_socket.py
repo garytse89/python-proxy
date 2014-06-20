@@ -28,8 +28,6 @@ class IncomingRequestSocket(Thread):
         self.request_string = None
         self.request = None
 
-        self.ready_to_drop = False
-
         super(IncomingRequestSocket,self).__init__()
 
 
@@ -62,11 +60,6 @@ class IncomingRequestSocket(Thread):
             # print('Incoming Request Socket: \n{}\n{}'.format(self.id,self.buffer))
         except:
             data = ''
-
-        if '' in data and self.stop_flag:
-            pass
-            #print('\'\' detected in socket id = {}, drop the damn connection after write out'.format(self.id))
-            #self.ready_to_drop = True # don't drop
 
         if data == '':
             self.stop_flag = False
