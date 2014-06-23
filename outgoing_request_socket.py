@@ -8,6 +8,7 @@ import logging
 import gzip
 import zlib
 from StringIO import StringIO
+logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
 response_handler = ResponseFactory()
 
@@ -40,27 +41,16 @@ class OutgoingRequestSocket(Thread):
 
         self.proxy.insert_outgoing_request(self)
 
-        super(OutgoingRequestSocket,self).__init__()      
-
-        
-
-        print('Incoming id {} created outgoing id {}'.format(self.incoming_socket_id, self.id))
+        super(OutgoingRequestSocket,self).__init__()
 
         host = incoming_request.host
-
-        if host == 'ajax.googleapis.com':
-            self.tracked = True
-        else:
-            self.tracked = False
-
         request_string = incoming_request.render()
         self.send_request(host, request_string)
 
+        print('Incoming id {} created outgoing id {}'.format(self.incoming_socket_id, self.id))
 
     def run(self):
         while self.stop_flag:
-            if self.tracked:
-                print(self.id, 'running')
             self.read_header()
             self.read_body()
 
@@ -77,11 +67,16 @@ class OutgoingRequestSocket(Thread):
                     if not self._header.is_chunked:
                         if self._header.get_argument('Content-Length'):
                             self._content_length = int(self._header.get_content_length())
+                        else: #304 Not modified, should fetch from cache
+                            #self.proxy.drop_outgoing_request(self.id)
+                            print('304 found, drop.')
 
                     # drop if 404
-                    if int(self._header._status_number) == 304:
-                        print('304 found, writeback', self.buffer)
-                        self.write('') 
+                    if int(self._header._status_number) == 404:
+                        print('404 found, drop', self.buffer)
+                        #self.read()
+                        #print('2', self.buffer)
+                        #self.proxy.drop_outgoing_request(self.id)
 
                     self.parsing_header = False
                     # print the header:
@@ -89,22 +84,19 @@ class OutgoingRequestSocket(Thread):
                 else:
                     print('buffer is ... ', self.buffer)
             except Exception as e:
-                print '{} read_header error in ORS'.format(self.id, e)
+                print e
 
     def read_body(self):
-        if not self.parsing_header:       
+        if not self.parsing_header:            
             # no need to do a read if the expected content length is already equal to the remaining buffer (leftover from reading the response header)
             if '0\r\n\r\n' not in self.buffer and len(self.buffer) != self._content_length:
                 self.read() # in case last chunk was already read and socket.recv() will now block
-            
+
             if self._header.is_chunked:
                 if self._chunked_size == 0:
                     try:
                         self._chunked_size, self._chunked_size_line = parse.parse_response_body_chunked_size(self.buffer)
-                        if self._chunked_size == 0 and self._chunked_size_line == '':
-                            self.proxy.drop_outgoing_request(self.id) # corrupt chunked response does not contain 0\r\n\r\n 
-                        self.handle_chunked_size()     
-
+                        self.handle_chunked_size()                        
                     except Exception as e:
                         print('ors read_body line 85', e)
                         
@@ -131,7 +123,6 @@ class OutgoingRequestSocket(Thread):
                 if self._content_body:
                     self.write(self._content_body)
                     self.proxy.drop_outgoing_request(self.id)
-                    print('{} done writing, drop for real'.format(self.id))
                     # if self.socket.recv(4096) == '':
                     #     self.proxy.drop_outgoing_request(self.id)
 
@@ -205,5 +196,5 @@ class OutgoingRequestSocket(Thread):
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno, "error on host = ", host, e)
+            print(exc_type, fname, exc_tb.tb_lineno, "error on host = ", host)
 
